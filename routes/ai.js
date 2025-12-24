@@ -367,13 +367,14 @@ async function executeCallbackRequest(data, conversationContext) {
         const createdAt = result.rows[0].created_at;
         const referenceId = `CB-${new Date(createdAt).getTime()}-${callbackId}`;
 
-        // Send emails (admin notification + customer confirmation)
-        await sendCallbackEmails({
+        // Send emails (admin notification + customer confirmation) in background
+        // Don't await this - let it run asynchronously to prevent blocking the chat response
+        sendCallbackEmails({
             ...data,
             id: callbackId,
             referenceId: referenceId,
             conversationContext: conversationContext
-        });
+        }).catch(err => console.error('Background email sending failed:', err.message));
 
         return {
             success: true,

@@ -32,7 +32,7 @@ class AIChat {
             return crypto.randomUUID();
         }
         // Fallback for older browsers
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
             const r = Math.random() * 16 | 0;
             const v = c == 'x' ? r : (r & 0x3 | 0x8);
             return v.toString(16);
@@ -75,7 +75,7 @@ class AIChat {
         await this.loadConfig();
 
         // Add welcome message
-        this.addMessage('ai', 'Hello! 👋 I\'m here to help you grow your business with AI and digital marketing. How can I assist you today?');
+        this.addMessage('ai', 'Hello! 👋 Welcome to Sydney Swift Plumbing. I can help you book a $0 Call Out, answer questions, or arrange emergency service. How can I help?');
 
         // Add suggested questions if available
         if (this.suggestedQuestions.length > 0 && !this.hasShownSuggestions) {
@@ -140,7 +140,7 @@ class AIChat {
     toggleChat() {
         this.isOpen = !this.isOpen;
         this.chatWindow.classList.toggle('hidden');
-        
+
         if (this.isOpen) {
             this.chatInput.focus();
             // Track chat open event
@@ -155,24 +155,24 @@ class AIChat {
     resetChat() {
         // Clear all messages
         this.chatMessages.innerHTML = '';
-        
+
         // Reset conversation history
         this.conversationHistory = [];
-        
+
         // Reset flags
         this.hasShownSuggestions = false;
         this.userHasScrolled = false;
         this.isStreaming = false;
         this.streamingMessageDiv = null;
-        
+
         // Add welcome message back
-        this.addMessage('ai', 'Hello! 👋 I\'m here to help you grow your business with AI and digital marketing. How can I assist you today?');
-        
+        this.addMessage('ai', 'Hello! 👋 Welcome to Sydney Swift Plumbing. I can help you book a $0 Call Out, answer questions, or arrange emergency service. How can I help?');
+
         // Show suggested questions again
         if (this.suggestedQuestions.length > 0) {
             this.showSuggestedQuestions();
         }
-        
+
         // Track reset event
         if (typeof gtag !== 'undefined') {
             gtag('event', 'chat_reset', {
@@ -182,8 +182,8 @@ class AIChat {
     }
 
     handleOutsideClick(e) {
-        if (this.isOpen && 
-            !this.chatWindow.contains(e.target) && 
+        if (this.isOpen &&
+            !this.chatWindow.contains(e.target) &&
             !this.chatToggle.contains(e.target)) {
             this.toggleChat();
         }
@@ -192,14 +192,14 @@ class AIChat {
     addMessage(type, text) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `chat-message ${type}`;
-        
+
         // Format AI messages with markdown-like rendering
         if (type === 'ai') {
             messageDiv.innerHTML = this.formatMessage(text);
         } else {
             messageDiv.textContent = text;
         }
-        
+
         this.chatMessages.appendChild(messageDiv);
         this.scrollToBottom();
 
@@ -341,10 +341,10 @@ class AIChat {
 
         for (let line of lines) {
             const trimmed = line.trim();
-            
+
             // Check if line is a block element (heading, list tag)
             const isBlockElement = /^<(h[1-4]|ul|li|\/(h[1-4]|ul|li))/.test(trimmed);
-            
+
             if (isBlockElement) {
                 // Flush paragraph if we have accumulated lines
                 if (paragraphLines.length > 0) {
@@ -373,7 +373,7 @@ class AIChat {
     addTypingIndicator() {
         // Remove any existing typing indicator first
         this.removeTypingIndicator();
-        
+
         const typingDiv = document.createElement('div');
         typingDiv.className = 'chat-message typing';
         typingDiv.id = 'typingIndicator';
@@ -405,10 +405,10 @@ class AIChat {
 
     handleScroll() {
         if (!this.isStreaming) return;
-        
+
         const threshold = 50;
         const isNearBottom = this.chatMessages.scrollHeight - this.chatMessages.scrollTop - this.chatMessages.clientHeight < threshold;
-        
+
         // If user scrolls away from bottom during streaming, pause auto-scroll
         if (!isNearBottom) {
             this.userHasScrolled = true;
@@ -426,7 +426,7 @@ class AIChat {
 
     async handleSubmit(e) {
         e.preventDefault();
-        
+
         const message = this.chatInput.value.trim();
         if (!message) return;
 
@@ -448,7 +448,7 @@ class AIChat {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     message,
                     history: this.conversationHistory.slice(-10),
                     sessionId: this.sessionId
@@ -457,7 +457,7 @@ class AIChat {
 
             // Check if streaming
             const contentType = response.headers.get('content-type');
-            
+
             if (contentType && contentType.includes('text/event-stream')) {
                 // Handle streaming response
                 await this.handleStreamingResponse(response);
@@ -470,7 +470,7 @@ class AIChat {
 
                 if (response.ok) {
                     this.addMessage('ai', data.response || data.message);
-                    
+
                     // Track successful chat interaction
                     if (typeof gtag !== 'undefined') {
                         gtag('event', 'chat_message_sent', {
@@ -538,33 +538,33 @@ class AIChat {
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
                         const data = line.slice(6);
-                        
+
                         if (data === '[DONE]') {
                             // Stop streaming and do final render without cursor
                             this.isStreaming = false;
-                            
+
                             // Final render without cursor
                             if (this.streamingMessageDiv && fullResponse) {
                                 this.streamingMessageDiv.innerHTML = this.formatMessage(fullResponse);
                                 this.scrollToBottom();
                             }
-                            
+
                             if (fullResponse) {
                                 this.conversationHistory.push({
                                     role: 'assistant',
                                     content: fullResponse
                                 });
                             }
-                            
+
                             this.streamingMessageDiv = null;
-                            
+
                             // Enable email transcript button after first AI response
                             if (this.conversationHistory.length >= 3 && !this.hasShownEmailButton) {
                                 setTimeout(() => {
                                     this.enableEmailButton();
                                 }, 500);
                             }
-                            
+
                             if (typeof gtag !== 'undefined') {
                                 gtag('event', 'chat_message_sent', {
                                     'event_category': 'engagement'
@@ -575,7 +575,7 @@ class AIChat {
 
                         try {
                             const parsed = JSON.parse(data);
-                            
+
                             // Handle tool status events
                             if (parsed.tool_status) {
                                 this.removeTypingIndicator();
@@ -694,7 +694,7 @@ class AIChat {
         resultsDiv.style.cssText = 'background: #ffffff; color: #1f2937; padding: 16px; border-radius: 12px; margin: 8px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #e5e7eb;';
 
         let html = `<div style="margin-bottom: 12px; font-size: 14px; color: #6b7280;"><strong style="color: #4A5D4F;">🔍 Search Results for:</strong> "${result.query}"</div>`;
-        
+
         if (result.results && result.results.length > 0) {
             html += '<div style="background: #f9fafb; border-radius: 8px; padding: 12px; border: 1px solid #e5e7eb;">';
             result.results.forEach((item, index) => {
@@ -800,6 +800,11 @@ class AIChat {
     }
 
     renderCallbackConfirmation(result) {
+        if (!result || !result.success) {
+            this.showToolError(result.error || 'Failed to schedule callback. Please try again or call us directly.');
+            return;
+        }
+
         const confirmDiv = document.createElement('div');
         confirmDiv.className = 'chat-message ai callback-confirmation';
         confirmDiv.style.cssText = 'background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 16px; border-radius: 12px; margin: 8px 0;';
@@ -991,11 +996,11 @@ class AIChat {
 
             if (response.ok && result.success) {
                 this.showModalMessage(messageDiv, '✅ Success! Check your email inbox.', 'success');
-                
+
                 // Close modal after 2 seconds
                 setTimeout(() => {
                     modal.remove();
-                    
+
                     // Show confirmation in chat
                     this.addMessage('ai', `Great! I've sent your chat transcript to ${email}. Our team will follow up with you within 24 hours. 📧`);
                 }, 2000);
@@ -1014,7 +1019,7 @@ class AIChat {
     showModalMessage(messageDiv, text, type) {
         messageDiv.style.display = 'block';
         messageDiv.textContent = text;
-        
+
         if (type === 'success') {
             messageDiv.style.background = '#d1fae5';
             messageDiv.style.color = '#065f46';
