@@ -115,10 +115,10 @@ async function executeBraveSearch(query, sessionId) {
                 'SELECT COUNT(*) as count FROM search_queries WHERE session_id = $1',
                 [sessionId]
             );
-            
+
             const searchCount = parseInt(sessionSearches.rows[0].count);
             const maxSearches = parseInt(process.env.MAX_SEARCHES_PER_SESSION) || 3;
-            
+
             if (searchCount >= maxSearches) {
                 return {
                     error: `You've reached the maximum of ${maxSearches} searches for this conversation. I can still help answer your questions directly!`,
@@ -132,15 +132,15 @@ async function executeBraveSearch(query, sessionId) {
             `SELECT COUNT(*) as count FROM search_queries 
              WHERE created_at >= date_trunc('month', CURRENT_TIMESTAMP)`
         );
-        
+
         const monthlyCount = parseInt(monthlySearches.rows[0].count);
         const monthlyQuota = parseInt(process.env.BRAVE_MONTHLY_QUOTA) || 2000;
-        
+
         // Send warning email if approaching quota
         if (monthlyCount >= monthlyQuota * 0.95 && monthlyCount % 10 === 0) {
             sendQuotaWarningEmail(monthlyCount, monthlyQuota);
         }
-        
+
         if (monthlyCount >= monthlyQuota) {
             return {
                 error: 'Monthly search quota exceeded. I\'ll help you with the information I have!',
@@ -211,10 +211,10 @@ async function executeFetchWebpage(url, sessionId) {
                 'SELECT COUNT(*) as count FROM search_queries WHERE session_id = $1 AND query LIKE $2',
                 [sessionId, 'webpage:%']
             );
-            
+
             const fetchCount = parseInt(sessionFetches.rows[0].count);
             const maxFetches = parseInt(process.env.MAX_WEBPAGE_FETCHES_PER_SESSION) || 5;
-            
+
             if (fetchCount >= maxFetches) {
                 return {
                     error: `You've reached the maximum of ${maxFetches} webpage fetches for this conversation. I can still help answer your questions!`,
@@ -239,11 +239,11 @@ async function executeFetchWebpage(url, sessionId) {
         console.log(`Webpage fetched successfully, status: ${response.status}`);
 
         const html = response.data;
-        
+
         // Simple HTML parsing - extract key elements
         const title = (html.match(/<title[^>]*>([^<]+)<\/title>/i) || [])[1] || 'No title';
         const metaDescription = (html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i) || [])[1] || '';
-        
+
         // Remove script and style tags
         let textContent = html
             .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
@@ -258,10 +258,10 @@ async function executeFetchWebpage(url, sessionId) {
         }
 
         // Extract headings for structure
-        const h1Tags = (html.match(/<h1[^>]*>([^<]+)<\/h1>/gi) || []).map(tag => 
+        const h1Tags = (html.match(/<h1[^>]*>([^<]+)<\/h1>/gi) || []).map(tag =>
             tag.replace(/<[^>]+>/g, '').trim()
         );
-        const h2Tags = (html.match(/<h2[^>]*>([^<]+)<\/h2>/gi) || []).map(tag => 
+        const h2Tags = (html.match(/<h2[^>]*>([^<]+)<\/h2>/gi) || []).map(tag =>
             tag.replace(/<[^>]+>/g, '').trim()
         ).slice(0, 10); // Limit to first 10 h2s
 
@@ -289,21 +289,21 @@ async function executeFetchWebpage(url, sessionId) {
 
     } catch (error) {
         console.error('Fetch webpage error:', error.message);
-        
+
         if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
             return {
                 error: 'Could not connect to that website. Please check the URL is correct.',
                 content: null
             };
         }
-        
+
         if (error.response?.status === 404) {
             return {
                 error: 'Page not found (404). The URL may be incorrect or the page may have been removed.',
                 content: null
             };
         }
-        
+
         if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
             return {
                 error: 'The website took too long to respond. It may be down or very slow.',
@@ -397,7 +397,7 @@ async function executeCallbackRequest(data, conversationContext) {
 async function sendCallbackEmails(data) {
     try {
         const recipients = process.env.RECIPIENT_EMAIL.split(',').map(e => e.trim());
-        
+
         // Admin notification email
         const adminEmailData = {
             from: process.env.EMAIL_FROM,
@@ -569,7 +569,7 @@ async function sendQuotaWarningEmail(currentCount, quota) {
     try {
         const recipients = process.env.RECIPIENT_EMAIL.split(',').map(e => e.trim());
         const percentage = Math.round((currentCount / quota) * 100);
-        
+
         const emailData = {
             from: process.env.EMAIL_FROM,
             to: recipients,
@@ -604,15 +604,15 @@ router.post('/chat', async (req, res) => {
 
         // Validate input
         if (!message || typeof message !== 'string') {
-            return res.status(400).json({ 
-                error: 'Message is required' 
+            return res.status(400).json({
+                error: 'Message is required'
             });
         }
 
         if (!process.env.OPENROUTER_API_KEY) {
             console.error('OPENROUTER_API_KEY not configured');
-            return res.status(500).json({ 
-                error: 'AI service not configured' 
+            return res.status(500).json({
+                error: 'AI service not configured'
             });
         }
 
@@ -620,7 +620,21 @@ router.post('/chat', async (req, res) => {
         const messages = [
             {
                 role: 'system',
-                content: process.env.OPENROUTER_SYSTEM_PROMPT || 'You are a helpful AI assistant.'
+                content: (() => {
+                    const fs = require('fs');
+                    const path = require('path');
+                    const promptPath = path.join(__dirname, '..', 'system_prompt.txt');
+
+                    try {
+                        if (fs.existsSync(promptPath)) {
+                            return fs.readFileSync(promptPath, 'utf8');
+                        }
+                    } catch (err) {
+                        console.error('Error reading system_prompt.txt:', err);
+                    }
+
+                    return process.env.OPENROUTER_SYSTEM_PROMPT || 'You are a helpful AI assistant.';
+                })()
             }
         ];
 
@@ -658,7 +672,7 @@ router.post('/chat', async (req, res) => {
             res.setHeader('Cache-Control', 'no-cache, no-transform');
             res.setHeader('Connection', 'keep-alive');
             res.setHeader('X-Accel-Buffering', 'no');
-            
+
             if (typeof res.flushHeaders === 'function') {
                 res.flushHeaders();
             }
@@ -686,12 +700,12 @@ router.post('/chat', async (req, res) => {
             );
 
             const keepAlive = setInterval(() => {
-                try { res.write(':\n\n'); } catch (_) {}
+                try { res.write(':\n\n'); } catch (_) { }
             }, 15000);
 
             const cleanup = () => {
                 clearInterval(keepAlive);
-                try { response.data.destroy(); } catch (_) {}
+                try { response.data.destroy(); } catch (_) { }
             };
 
             let toolCallBuffer = {};
@@ -699,11 +713,11 @@ router.post('/chat', async (req, res) => {
 
             response.data.on('data', async (chunk) => {
                 const lines = chunk.toString().split('\n').filter(line => line.trim() !== '');
-                
+
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
                         const data = line.slice(6);
-                        
+
                         if (data === '[DONE]') {
                             // Don't send [DONE] yet - we need to execute buffered tool calls first
                             // The actual [DONE] will be sent after tool execution in the 'end' handler
@@ -712,14 +726,14 @@ router.post('/chat', async (req, res) => {
                             try {
                                 const parsed = JSON.parse(data);
                                 const delta = parsed.choices?.[0]?.delta;
-                                
+
                                 // Check for tool calls
                                 if (delta?.tool_calls) {
                                     const toolCall = delta.tool_calls[0];
-                                    
+
                                     // Log each tool call chunk for debugging
                                     console.log('Tool call chunk received:', JSON.stringify(toolCall, null, 2));
-                                    
+
                                     if (toolCall.id) {
                                         currentToolCallId = toolCall.id;
                                         if (!toolCallBuffer[currentToolCallId]) {
@@ -761,24 +775,24 @@ router.post('/chat', async (req, res) => {
 
             response.data.on('end', async () => {
                 console.log('Stream ended, checking for buffered tool calls');
-                
+
                 // Execute any buffered tool calls before ending
                 if (currentToolCallId && toolCallBuffer[currentToolCallId]) {
                     const toolCall = toolCallBuffer[currentToolCallId];
-                    
+
                     console.log('Executing tool call:', {
                         name: toolCall.name,
                         argumentsLength: toolCall.arguments?.length,
                         argumentsPreview: toolCall.arguments?.substring(0, 100)
                     });
-                    
+
                     try {
                         // Ensure arguments string is properly formed JSON
                         const argsString = toolCall.arguments?.trim() || '';
                         if (!argsString) {
                             throw new Error('Empty arguments for tool call');
                         }
-                        
+
                         const args = JSON.parse(argsString);
                         let toolResult;
 
@@ -805,7 +819,7 @@ router.post('/chat', async (req, res) => {
                         // PHASE 2: Send tool result back to AI for analysis
                         if (toolResult) {
                             console.log('Making follow-up API call with tool result...');
-                            
+
                             // Build follow-up messages with tool result
                             const followUpMessages = [
                                 ...messages,
@@ -856,16 +870,16 @@ router.post('/chat', async (req, res) => {
                             // Stream the follow-up response
                             followUpResponse.data.on('data', (chunk) => {
                                 const lines = chunk.toString().split('\n').filter(line => line.trim());
-                                
+
                                 for (const line of lines) {
                                     if (line.startsWith('data: ')) {
                                         const data = line.slice(6);
-                                        
+
                                         if (data === '[DONE]') {
                                             console.log('Follow-up response complete');
                                             return;
                                         }
-                                        
+
                                         // Forward the analysis response to client
                                         res.write(`data: ${data}\n\n`);
                                     }
@@ -897,11 +911,11 @@ router.post('/chat', async (req, res) => {
                         res.write(`data: ${JSON.stringify({ tool_error: `Tool execution failed: ${error.message}` })}\n\n`);
                     }
                 }
-                
+
                 console.log('Sending [DONE] signal');
                 res.write('data: [DONE]\n\n');
                 console.log('[DONE] signal sent successfully');
-                
+
                 cleanup();
                 res.end();
             });
@@ -977,34 +991,34 @@ router.post('/chat', async (req, res) => {
                 throw new Error('No response from AI service');
             }
 
-            res.status(200).json({ 
+            res.status(200).json({
                 response: aiResponse,
-                success: true 
+                success: true
             });
         }
 
     } catch (error) {
         console.error('AI chat error:', error.response?.data || error.message);
-        
+
         if (error.response?.status === 401) {
-            return res.status(500).json({ 
-                error: 'AI service authentication failed' 
+            return res.status(500).json({
+                error: 'AI service authentication failed'
             });
         }
 
         if (error.response?.status === 429) {
-            return res.status(429).json({ 
-                error: 'Too many requests. Please wait a moment and try again.' 
+            return res.status(429).json({
+                error: 'Too many requests. Please wait a moment and try again.'
             });
         }
 
         if (error.code === 'ECONNABORTED') {
-            return res.status(504).json({ 
-                error: 'AI service timeout. Please try again.' 
+            return res.status(504).json({
+                error: 'AI service timeout. Please try again.'
             });
         }
 
-        res.status(500).json({ 
+        res.status(500).json({
             error: 'Failed to get AI response. Please try again later.',
             details: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
@@ -1044,14 +1058,14 @@ router.post('/chat/email-transcript', async (req, res) => {
 
         // Validate input
         if (!email || typeof email !== 'string') {
-            return res.status(400).json({ 
-                error: 'Email is required' 
+            return res.status(400).json({
+                error: 'Email is required'
             });
         }
 
         if (!transcript || !Array.isArray(transcript) || transcript.length === 0) {
-            return res.status(400).json({ 
-                error: 'Chat transcript is required' 
+            return res.status(400).json({
+                error: 'Chat transcript is required'
             });
         }
 
@@ -1071,7 +1085,7 @@ router.post('/chat/email-transcript', async (req, res) => {
         // Extract any mentioned services or topics from conversation
         const conversationText = transcript.map(m => m.content).join(' ').toLowerCase();
         let detectedService = null;
-        
+
         const serviceKeywords = {
             'ai assistant': ['ai assistant', 'chatbot', 'automation', 'ai chat'],
             'seo': ['seo', 'search engine', 'google ranking', 'local seo'],
@@ -1118,7 +1132,7 @@ router.post('/chat/email-transcript', async (req, res) => {
             const alignment = isUser ? 'right' : 'left';
             const label = isUser ? 'You' : 'Websited AI';
             const labelColor = isUser ? '#6b7280' : '#0369a1';
-            
+
             return `
                 <div style="margin-bottom: 20px; text-align: ${alignment};">
                     <div style="display: inline-block; max-width: 80%; text-align: left;">
@@ -1131,10 +1145,10 @@ router.post('/chat/email-transcript', async (req, res) => {
             `;
         }).join('');
 
-        const currentDate = new Date().toLocaleDateString('en-AU', { 
-            day: 'numeric', 
-            month: 'long', 
-            year: 'numeric' 
+        const currentDate = new Date().toLocaleDateString('en-AU', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
         });
 
         // Send transcript email to customer
@@ -1280,7 +1294,7 @@ router.post('/chat/email-transcript', async (req, res) => {
 
     } catch (error) {
         console.error('Email transcript error:', error.message);
-        
+
         if (error.code === '23514') { // CHECK constraint violation
             return res.status(500).json({
                 error: 'Database configuration error. Please contact support.',
