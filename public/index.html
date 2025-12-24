@@ -39,6 +39,20 @@
             <a href="/" class="logo">
                 <img src="/images/logo_sydney_swift.png" alt="Sydney Swift Plumbing">
             </a>
+
+            <nav class="nav-menu" id="nav-menu">
+                <a href="#services" class="nav-link" onclick="toggleMenu()">Services</a>
+                <a href="#offer" class="nav-link" onclick="toggleMenu()">Why Us</a>
+                <a href="#reviews" class="nav-link" onclick="toggleMenu()">Reviews</a>
+                <a href="#book-now" class="nav-link" onclick="toggleMenu()">Contact</a>
+            </nav>
+
+            <button class="mobile-menu-toggle" aria-label="Toggle menu" onclick="toggleMenu()">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
             <div class="nav-cta">
                 <a href="tel:0291112222" class="btn btn-primary">Call 02 9111 2222</a>
             </div>
@@ -82,7 +96,7 @@
     </section>
 
     <!-- Services Section -->
-    <section class="section">
+    <section id="services" class="section">
         <div class="container">
             <div class="text-center">
                 <h2>Our Services</h2>
@@ -124,7 +138,7 @@
     </section>
 
     <!-- Irresistible Offer -->
-    <section class="section offer-section">
+    <section id="offer" class="section offer-section">
         <div class="container">
             <div class="offer-box">
                 <h2>The "Sydney Swift" Promise</h2>
@@ -148,7 +162,7 @@
     </section>
 
     <!-- Testimonials -->
-    <section class="section">
+    <section id="reviews" class="section">
         <div class="container">
             <h2 class="text-center" style="margin-bottom: 3rem;">What Our Customers Say</h2>
             <div class="testimonials-grid">
@@ -264,6 +278,11 @@
 
     <!-- Scripts -->
     <script>
+        function toggleMenu() {
+            const nav = document.getElementById('nav-menu');
+            nav.classList.toggle('active');
+        }
+
         function handleFormSubmit(event) {
             event.preventDefault();
             const btn = event.target.querySelector('button[type="submit"]');
